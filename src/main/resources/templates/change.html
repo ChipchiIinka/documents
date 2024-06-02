@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Изменить имя файла</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="container">
+    <h1>Изменить имя файла</h1>
+    <div id="notification" class="notification" style="display:none;"></div>
+    <form id="change-name-form">
+        <input type="hidden" name="_method" value="put">
+        <div class="form-group">
+            <label for="name">Новое имя файла:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        <div class="form-group">
+            <label for="description">Описание:</label>
+            <textarea id="description" name="description"></textarea>
+        </div>
+        <button type="submit">Изменить имя</button>
+    </form>
+    <a class="back-link" href="/">Назад к списку файлов</a>
+</div>
+
+<script>
+    document.getElementById('change-name-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+
+        fetch(`/api/files/{{id}}/changeName`, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/?success=Имя файла успешно изменено';
+                } else {
+                    showNotification(`Ошибка: ${data.error.text}`, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification(`Ошибка: ${error.message}`, 'error');
+            });
+    });
+
+    function showNotification(message, type) {
+        const notification = document.getElementById('notification');
+        notification.innerHTML = message;
+        notification.className = 'notification ' + type;
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Хранилище файлов</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="container">
+    <h1>Хранилище файлов</h1>
+    <div id="notification" class="notification" style="display:none;"></div>
+    <div id="success-message" class="notification success" style="display:none;"></div>
+
+    <div class="form-inline">
+        <input type="text" id="searchQuery" name="searchQuery" placeholder="Поиск файлов..." oninput="searchFiles()">
+        <form id="statistic-form" class="statistic-form">
+            <label for="startDate">Начало:</label>
+            <input type="date" id="startDate" name="startDate" required>
+            <label for="endDate">Конец:</label>
+            <input type="date" id="endDate" name="endDate" required>
+            <button type="submit">Создать файл со статистикой</button>
+        </form>
+        <button onclick="window.location.href='/add'" class="add-file-button">Добавить файл</button>
+    </div>
+
+    <table>
+        <thead>
+        <tr>
+            <th><a href="#" onclick="sortTable('name')">Имя <span id="name-sort-icon"></span></a></th>
+            <th><a href="#" onclick="sortTable('size')">Размер <span id="size-sort-icon"></span></a></th>
+            <th><a href="#" onclick="sortTable('contentType')">Тип <span id="contentType-sort-icon"></span></a></th>
+            <th>Описание</th>
+            <th><a href="#" onclick="sortTable('lastModified')">Последнее обновление <span id="lastModified-sort-icon"></span></a></th>
+            <th>Действия</th>
+        </tr>
+        </thead>
+        <tbody id="file-list">
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let currentSortField = 'name';
+    let currentSortOrder = 'asc';
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const successMessage = urlParams.get('success');
+        currentSortField = urlParams.get('sortField') || 'name';
+        currentSortOrder = urlParams.get('sortOrder') || 'asc';
+
+        loadFiles();
+
+        if (successMessage) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.innerHTML = successMessage;
+            successDiv.style.display = 'block';
+            setTimeout(() => {
+                successDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        updateSortIcons();
+    });
+
+    function loadFiles(searchQuery = '') {
+        fetch(`/api/files/search?searchRequest=${searchQuery}&sortField=${currentSortField}&sortOrder=${currentSortOrder}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const fileList = document.getElementById('file-list');
+                fileList.innerHTML = '';
+
+                if (data.success && data.body && data.body.length > 0) {
+                    data.body.forEach(file => {
+                        addFileToTable(file);
+                    });
+                } else {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="6" style="text-align: center;">Файлы не найдены</td>`;
+                    fileList.appendChild(row);
+                }
+            })
+            .catch(error => {
+                showNotification(`Ошибка: ${error.message}`, 'error');
+            });
+    }
+
+    function addFileToTable(file) {
+        const fileList = document.getElementById('file-list');
+        const row = document.createElement('tr');
+        row.id = `file-${file.id}`;
+
+        row.innerHTML = `
+            <td>${file.name || ''}</td>
+            <td>${formatSize(file.size) || ''}</td>
+            <td>${file.contentType || ''}</td>
+            <td>${file.description || ''}</td>
+            <td>${file.lastModified || ''}</td>
+            <td>
+                <a href="/change/${file.id}"><img src="/images/change_name.png" width="30" height="30" alt="change_name"></a>
+                <a href="/update/${file.id}"><img src="/images/update.png" width="30" height="30" alt="update"></a>
+                <a href="/api/files/${file.id}"><img src="/images/download.png" width="30" height="30" alt="download"></a>
+                <button onclick="deleteFile('${file.id}')" style="background:none; border:none; padding:0;">
+                    <img src="/images/delete.png" width="30" height="30" alt="delete">
+                </button>
+            </td>
+        `;
+
+        fileList.appendChild(row);
+    }
+
+    function searchFiles() {
+        const searchQuery = document.getElementById('searchQuery').value;
+        loadFiles(searchQuery);
+    }
+
+    function formatSize(bytes) {
+        const sizes = ['байт', 'КБ', 'МБ', 'ГБ', 'ТБ'];
+        if (bytes === 0) return '0 байт';
+        const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+        return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+    }
+
+    function showNotification(message, type) {
+        const notification = document.getElementById('notification');
+        notification.innerHTML = message;
+        notification.className = 'notification ' + type;
+        notification.style.display = 'block';
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 3000);
+    }
+
+    function deleteFile(id) {
+        fetch(`/api/files/${id}/delete`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`file-${id}`).remove();
+                    showNotification('Файл успешно удален', 'success');
+                } else {
+                    showNotification(`Ошибка: ${data.error.text}`, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification(`Ошибка: ${error.message}`, 'error');
+            });
+    }
+
+    function sortTable(field) {
+        if (currentSortField === field) {
+            currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortField = field;
+            currentSortOrder = 'asc';
+        }
+
+        const searchQuery = document.getElementById('searchQuery').value;
+        loadFiles(searchQuery);
+        updateSortIcons();
+    }
+
+    function updateSortIcons() {
+        const fields = ['name', 'size', 'contentType', 'lastModified'];
+        fields.forEach(field => {
+            const icon = document.getElementById(`${field}-sort-icon`);
+            if (field === currentSortField) {
+                icon.textContent = currentSortOrder === 'asc' ? '▲' : '▼';
+            } else {
+                icon.textContent = '';
+            }
+        });
+    }
+
+    document.getElementById('statistic-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const formData = new FormData(this);
+        const startDate = formData.get('startDate');
+        const endDate = formData.get('endDate');
+
+        if (new Date(startDate) > new Date(endDate)) {
+            showNotification('Начальная дата не может быть позже конечной даты', 'error');
+            return;
+        }
+
+        fetch(`/api/files/statistic?startDate=${startDate}&endDate=${endDate}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Документ со статистикой успешно сгенерирован', 'success');
+                    loadFiles();
+                } else {
+                    showNotification(`Ошибка: ${data.error.text}`, 'error');
+                }
+            })
+            .catch(error => {
+                showNotification(`Ошибка: ${error.message}`, 'error');
+            });
+    });
+</script>
+</body>
+</html>
