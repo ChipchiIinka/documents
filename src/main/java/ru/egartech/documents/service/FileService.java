@@ -27,6 +27,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -133,19 +134,30 @@ public class FileService {
         LocalDateTime startDateTime = periodStart.atStartOfDay();
         LocalDateTime endDateTime = periodEnd.atTime(LocalTime.MAX);
         List<FileEntity> files = fileRepository.findAllByLastModifiedBetween(startDateTime, endDateTime);
-        FileEntity statisticDocument = new FileEntity();
-        String fileName = String.format("Статистика файлов за период %s - %s.docx",
+        String fileName = String.format("Статистика файлов за период: %s - %s.docx",
                 periodStart.format(formatter), periodEnd.format(formatter));
         StatisticCreator statisticCreator = new StatisticCreator();
         byte[] data = statisticCreator.createStatistic(files, periodStart, periodEnd);
-        statisticDocument.setName(fileName);
-        statisticDocument.setContentType(DOCX_TYPE);
-        statisticDocument.setSize((long) data.length);
-        statisticDocument.setData(data);
-        statisticDocument.setDescription(
-                String.format("Статистика добавления/редактирования файлов по типам за период %s - %s",
-                        periodStart.format(formatter), periodEnd.format(formatter)));
-        statisticDocument.setLastModified(LocalDateTime.now());
+
+        Optional<FileEntity> existingFileOpt = fileRepository.findByName(fileName);
+        FileEntity statisticDocument;
+
+        if (existingFileOpt.isPresent()) {
+            statisticDocument = existingFileOpt.get();
+            statisticDocument.setSize((long) data.length);
+            statisticDocument.setData(data);
+            statisticDocument.setLastModified(LocalDateTime.now());
+        } else {
+            statisticDocument = new FileEntity();
+            statisticDocument.setName(fileName);
+            statisticDocument.setContentType(DOCX_TYPE);
+            statisticDocument.setSize((long) data.length);
+            statisticDocument.setData(data);
+            statisticDocument.setDescription(
+                    String.format("Статистика добавления/редактирования файлов по типам за период: %s", fileName));
+            statisticDocument.setLastModified(LocalDateTime.now());
+        }
+
         fileRepository.save(statisticDocument);
     }
 

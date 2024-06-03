@@ -9,6 +9,7 @@ import ru.egartech.documents.entity.FileEntity;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -20,4 +21,6 @@ public interface FileRepository extends JpaRepository<FileEntity, UUID> {
     List<FileEntity> findBySearchRequest(@Param("searchString") String searchString, Sort sort);
 
     List<FileEntity> findAllByLastModifiedBetween(LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+    Optional<FileEntity> findByName(String name);
 }

@@ -12,6 +12,7 @@
     <div id="success-message" class="notification success" style="display:none;"></div>
 
     <div class="form-inline">
+        <label for="searchQuery"></label>
         <input type="text" id="searchQuery" name="searchQuery" placeholder="Поиск файлов..." oninput="searchFiles()">
         <form id="statistic-form" class="statistic-form">
             <label for="startDate">Начало:</label>
@@ -43,7 +44,7 @@
     let currentSortField = 'name';
     let currentSortOrder = 'asc';
 
-    document.addEventListener('DOMContentLoaded', (event) => {
+    document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const successMessage = urlParams.get('success');
         currentSortField = urlParams.get('sortField') || 'name';
@@ -202,7 +203,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showNotification('Документ со статистикой успешно сгенерирован', 'success');
+                    showNotification('Документ со статистикой успешно сгенерирован/обновлён', 'success');
                     loadFiles();
                 } else {
                     showNotification(`Ошибка: ${data.error.text}`, 'error');
