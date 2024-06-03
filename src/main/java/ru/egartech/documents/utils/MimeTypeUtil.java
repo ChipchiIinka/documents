@@ -82,6 +82,7 @@ public class MimeTypeUtil {
         mimeTypeMap.put("application/x-abiword", "AbiWord Document");
         mimeTypeMap.put("application/x-freearc", "FreeArc Archive");
         mimeTypeMap.put("application/x-iso9660-image", "ISO Disk Image");
+        mimeTypeMap.put("application/x-zip-compressed", "ZIP Archive");
     }
 
     private MimeTypeUtil() {
